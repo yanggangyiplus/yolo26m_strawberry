@@ -16,8 +16,14 @@ datasets/yolo_3folders/
 datasets/yolo_unified/images/
 datasets/yolo_unified/_label_*/
 
-# 라벨은 포함 (텍스트라 용량 작음)
-# datasets/yolo_unified/labels/ → 포함됨
+# 라벨 분할 폴더는 split_dataset.py로 만든 절대경로 심볼릭 링크라 git에 안전하지 않음
+# labels/all/ 만 포함하고, train/val/test 는 split_dataset.py를 다시 실행해 재생성
+datasets/yolo_unified/labels/train/
+datasets/yolo_unified/labels/val/
+datasets/yolo_unified/labels/test/
+
+# 라벨 캐시 (학습 시 자동 생성)
+datasets/**/*.cache
 
 # ───────────────────────────────
 # 학습/추론 결과 (이미지 포함으로 제외)
