@@ -1,0 +1,18 @@
+# Ultralytics YOLO data config — 통합 데이터셋 (수동 라벨링 완료 후 사용)
+#
+# 데이터 소스 (datasets/yolo_unified/{images,labels}/{train,val,test}):
+#   1. qin_*       Qin2006 HuggingFace (325장) — CVAT 기존 라벨
+#   2. uniq_*      UniqueData HuggingFace (40장) — CVAT 기존 라벨
+#   3. straw_pick_*   strawberryDataset/Pickable (264장) — 수동 라벨링
+#   4. straw_unpick_* strawberryDataset/UnPickable (259장) — 수동 라벨링
+#   5. user_raw/red_* 사용자 모형 사진 (39장) — HSV 자동 라벨
+#   6. realscene_*    실제 장면 사진 (7장) — 수동 라벨링 (가장 중요!)
+
+path: /home/user01/yolo_strawberry/datasets/yolo_unified
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: unripe_strawberry
+  1: ripe_strawberry

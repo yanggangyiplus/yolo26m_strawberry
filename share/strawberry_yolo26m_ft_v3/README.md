@@ -1,4 +1,12 @@
-# 딸기 검출 모델 공유 패키지 (YOLO26m, **v3**)
+# 딸기 검출 모델 공유 패키지 (YOLO26m, v3) — DEPRECATED
+
+> ⚠️ **이 버전은 더 이상 권장되지 않습니다.**  
+> 최신 권장 버전: [`../strawberry_yolo26m_unified/`](../strawberry_yolo26m_unified/) (unified v4, 2026-05-13)
+>
+> v3는 약 50장의 작은 데이터로 학습되어 모형(플라스틱) 사진 위주 환경에 과적합되어 있습니다.  
+> 실제 환경에서 사용할 경우 unified v4를 사용하세요.
+
+---
 
 `runs/detect/runs/strawberry/yolo26m_ft_v3-2/` 의 학습 산출물 복사본입니다.
 이전 `ft-5` 버전을 대체합니다.
