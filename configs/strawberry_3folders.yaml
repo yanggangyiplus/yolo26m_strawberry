@@ -1,0 +1,16 @@
+# Ultralytics YOLO data config — 3개 폴더 전용 데이터셋
+#
+# 데이터 소스 (모두 datasets/yolo_3folders/{images,labels}/{train,val,test} 로 통합):
+#   1. raw_str/                              → unripe (id=0)  분홍 모형
+#   2. red_str/                              → ripe   (id=1)  빨강 모형
+#   3. strawberryDataset/Pickable/           → ripe   (id=1)  실제 익은 딸기
+#   4. strawberryDataset/UnPickable/         → unripe (id=0)  실제 덜 익은 딸기
+
+path: /home/user01/yolo_strawberry/datasets/yolo_3folders
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: unripe_strawberry
+  1: ripe_strawberry

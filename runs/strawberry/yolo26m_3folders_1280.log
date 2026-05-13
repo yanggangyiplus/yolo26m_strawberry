@@ -1,0 +1,91 @@
+New https://pypi.org/project/ultralytics/8.4.49 available 😃 Update with 'pip install -U ultralytics'
+Ultralytics 8.4.48 🚀 Python-3.10.12 torch-2.12.0.dev20260407+cu128 CUDA:0 (NVIDIA GeForce RTX 5080 Laptop GPU, 15840MiB)
+[34m[1mengine/trainer: [0magnostic_nms=False, amp=True, angle=1.0, augment=False, auto_augment=randaugment, batch=24, bgr=0.0, box=7.5, cache=False, cfg=None, classes=None, close_mosaic=10, cls=0.5, cls_pw=0.0, compile=False, conf=None, copy_paste=0.0, copy_paste_mode=flip, cos_lr=False, cutmix=0.0, data=configs/strawberry_3folders.yaml, degrees=5.0, deterministic=True, device=0, dfl=1.5, dnn=False, dropout=0.0, dynamic=False, embed=None, end2end=None, epochs=100, erasing=0.4, exist_ok=False, fliplr=0.5, flipud=0.0, format=torchscript, fraction=1.0, freeze=None, half=False, hsv_h=0.015, hsv_s=0.5, hsv_v=0.4, imgsz=1280, int8=False, iou=0.7, keras=False, kobj=1.0, line_width=None, lr0=0.01, lrf=0.01, mask_ratio=4, max_det=300, mixup=0.0, mode=train, model=yolo26m.pt, momentum=0.937, mosaic=1.0, multi_scale=0.0, name=yolo26m_3folders_1280, nbs=64, nms=False, opset=None, optimize=False, optimizer=auto, overlap_mask=True, patience=30, perspective=0.0, plots=True, pose=12.0, pretrained=True, profile=False, project=runs/strawberry, rect=False, resume=False, retina_masks=False, rle=1.0, save=True, save_conf=False, save_crop=False, save_dir=/home/user01/yolo_strawberry/runs/detect/runs/strawberry/yolo26m_3folders_1280, save_frames=False, save_json=False, save_period=-1, save_txt=False, scale=0.5, seed=0, shear=0.0, show=False, show_boxes=True, show_conf=True, show_labels=True, simplify=True, single_cls=False, source=None, split=val, stream_buffer=False, task=detect, time=None, tracker=botsort.yaml, translate=0.1, val=True, verbose=True, vid_stride=1, visualize=False, warmup_bias_lr=0.1, warmup_epochs=3.0, warmup_momentum=0.8, weight_decay=0.0005, workers=8, workspace=None
+Overriding model.yaml nc=80 with nc=2
+
+                   from  n    params  module                                       arguments                     
+  0                  -1  1      1856  ultralytics.nn.modules.conv.Conv             [3, 64, 3, 2]                 
+  1                  -1  1     73984  ultralytics.nn.modules.conv.Conv             [64, 128, 3, 2]               
+  2                  -1  1    111872  ultralytics.nn.modules.block.C3k2            [128, 256, 1, True, 0.25]     
+  3                  -1  1    590336  ultralytics.nn.modules.conv.Conv             [256, 256, 3, 2]              
+  4                  -1  1    444928  ultralytics.nn.modules.block.C3k2            [256, 512, 1, True, 0.25]     
+  5                  -1  1   2360320  ultralytics.nn.modules.conv.Conv             [512, 512, 3, 2]              
+  6                  -1  1   1380352  ultralytics.nn.modules.block.C3k2            [512, 512, 1, True]           
+  7                  -1  1   2360320  ultralytics.nn.modules.conv.Conv             [512, 512, 3, 2]              
+  8                  -1  1   1380352  ultralytics.nn.modules.block.C3k2            [512, 512, 1, True]           
+  9                  -1  1    656896  ultralytics.nn.modules.block.SPPF            [512, 512, 5, 3, True]        
+ 10                  -1  1    990976  ultralytics.nn.modules.block.C2PSA           [512, 512, 1]                 
+ 11                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+ 12             [-1, 6]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 13                  -1  1   1642496  ultralytics.nn.modules.block.C3k2            [1024, 512, 1, True]          
+ 14                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+ 15             [-1, 4]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 16                  -1  1    542720  ultralytics.nn.modules.block.C3k2            [1024, 256, 1, True]          
+ 17                  -1  1    590336  ultralytics.nn.modules.conv.Conv             [256, 256, 3, 2]              
+ 18            [-1, 13]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 19                  -1  1   1511424  ultralytics.nn.modules.block.C3k2            [768, 512, 1, True]           
+ 20                  -1  1   2360320  ultralytics.nn.modules.conv.Conv             [512, 512, 3, 2]              
+ 21            [-1, 10]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+ 22                  -1  1   1974784  ultralytics.nn.modules.block.C3k2            [1024, 512, 1, True, 0.5, True]
+ 23        [16, 19, 22]  1   2801700  ultralytics.nn.modules.head.Detect           [2, 1, True, [256, 512, 512]] 
+YOLO26m summary: 280 layers, 21,775,972 parameters, 21,775,972 gradients, 74.7 GFLOPs
+
+Transferred 756/768 items from pretrained weights
+[34m[1mAMP: [0mrunning Automatic Mixed Precision (AMP) checks...
+[34m[1mAMP: [0mchecks passed ✅
+[34m[1mtrain: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 5424.2±1445.0 MB/s, size: 503.8 KB)
+[K[34m[1mtrain: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/train... 477 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 477/477 5.8Kit/s 0.1s
+[34m[1mtrain: [0mNew cache created: /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/train.cache
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 3714.3±2502.8 MB/s, size: 515.7 KB)
+[K[34m[1mval: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/val... 56 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 56/56 4.0Kit/s 0.0s
+[34m[1mval: [0mNew cache created: /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/val.cache
+[34m[1moptimizer:[0m 'optimizer=auto' found, ignoring 'lr0=0.01' and 'momentum=0.937' and determining best 'optimizer', 'lr0' and 'momentum' automatically... 
+[34m[1moptimizer:[0m AdamW(lr=0.001667, momentum=0.9) with parameter groups 124 weight(decay=0.0), 136 weight(decay=0.0005625000000000001), 136 bias(decay=0.0)
+/home/user01/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+Plotting labels to /home/user01/yolo_strawberry/runs/detect/runs/strawberry/yolo26m_3folders_1280/labels.jpg... 
+Image sizes 1280 train, 1280 val
+Using 8 dataloader workers
+Logging results to [1m/home/user01/yolo_strawberry/runs/detect/runs/strawberry/yolo26m_3folders_1280[0m
+Starting training for 100 epochs...
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+WARNING ⚠️ CUDA out of memory with batch=24. Reducing to batch=12 and retrying (1/3).
+[34m[1mtrain: [0mFast image access ✅ (ping: 0.7±1.4 ms, read: 1216.8±332.8 MB/s, size: 398.6 KB)
+[K[34m[1mtrain: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/train.cache... 477 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 477/477 37.7Mit/s 0.0s
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 1693.0±978.0 MB/s, size: 412.7 KB)
+[K[34m[1mval: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/val.cache... 56 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 56/56 1.7Mit/s 0.0s
+[34m[1moptimizer:[0m 'optimizer=auto' found, ignoring 'lr0=0.01' and 'momentum=0.937' and determining best 'optimizer', 'lr0' and 'momentum' automatically... 
+[34m[1moptimizer:[0m AdamW(lr=0.001667, momentum=0.9) with parameter groups 124 weight(decay=0.0), 136 weight(decay=0.00046875), 136 bias(decay=0.0)
+[K: 0% ──────────── 0/20  2.8s
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+WARNING ⚠️ CUDA out of memory with batch=12. Reducing to batch=6 and retrying (2/3).
+[34m[1mtrain: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 4956.4±3118.8 MB/s, size: 626.2 KB)
+[K[34m[1mtrain: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/train.cache... 477 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 477/477 142.9Mit/s 0.0s
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 737.8±248.4 MB/s, size: 291.4 KB)
+[K[34m[1mval: [0mScanning /home/user01/yolo_strawberry/datasets/yolo_3folders/labels/val.cache... 56 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 56/56 2.4Mit/s 0.0s
+[34m[1moptimizer:[0m 'optimizer=auto' found, ignoring 'lr0=0.01' and 'momentum=0.937' and determining best 'optimizer', 'lr0' and 'momentum' automatically... 
+[34m[1moptimizer:[0m AdamW(lr=0.001667, momentum=0.9) with parameter groups 124 weight(decay=0.0), 136 weight(decay=0.000515625), 136 bias(decay=0.0)
+[K: 0% ──────────── 0/40  4.3s
+
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+[K: 0% ──────────── 0/80  4.3s
+Traceback (most recent call last):
+  File "/home/user01/yolo_strawberry/scripts/train.py", line 133, in <module>
+    main()
+  File "/home/user01/yolo_strawberry/scripts/train.py", line 83, in main
+    model.train(
+  File "/home/user01/.local/lib/python3.10/site-packages/ultralytics/engine/model.py", line 792, in train
+    self.trainer.train()
+  File "/home/user01/.local/lib/python3.10/site-packages/ultralytics/engine/trainer.py", line 246, in train
+    self._do_train()
+  File "/home/user01/.local/lib/python3.10/site-packages/ultralytics/engine/trainer.py", line 448, in _do_train
+    self.scaler.scale(self.loss).backward()
+  File "/home/user01/.local/lib/python3.10/site-packages/torch/_tensor.py", line 631, in backward
+    torch.autograd.backward(
+  File "/home/user01/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 379, in backward
+    _engine_run_backward(
+  File "/home/user01/.local/lib/python3.10/site-packages/torch/autograd/graph.py", line 882, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+RuntimeError: CUDA error: CUBLAS_STATUS_ALLOC_FAILED when calling `cublasCreate(handle)`

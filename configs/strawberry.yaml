@@ -1,0 +1,17 @@
+# Ultralytics YOLO data config — 통합 2-class 스키마
+#
+# 데이터 소스 (모두 datasets/yolo/{images,labels}/{train,val,test} 로 통합):
+#   1. HuggingFace UniqueData/ripe-strawberries-detection  → 전부 ripe (id=1)
+#   2. HuggingFace Qin2006/Strawberry-MM-Straw5            → normal만 색상 분류, disease/overripe 드롭
+#   3. 사용자 사진 (raw_str/ red_str/)                      → GrabCut 자동 라벨링, 폴더명=클래스
+#
+# 픽 정책: ripe만 수확 후보. unripe는 회피.
+
+path: /home/user01/yolo_strawberry/datasets/yolo
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: unripe_strawberry
+  1: ripe_strawberry
