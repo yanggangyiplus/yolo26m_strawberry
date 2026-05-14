@@ -57,7 +57,7 @@ yolo_strawberry/
 │           ├── all/                     # ★ 934개 라벨 (git에 포함됨)
 │           └── train|val|test/          # symlink (gitignore, split_dataset.py로 재생성)
 ├── runs/
-│   ├── strawberry/*.log                 # ★ 학습 로그 (git에 포함됨)
+│   ├── strawberry/*.log                 # 학습 로그 (gitignore, 로컬 보존)
 │   ├── detect/runs/strawberry/          # 학습 결과 weights (gitignore)
 │   ├── compare/                         # gitignore
 │   └── realsense/                       # 카메라 스냅샷 (gitignore)
@@ -75,9 +75,10 @@ yolo_strawberry/
 | `yolo26m_ft_v3-2/` | yolo (40장 + 일부) | 640 | 16 | 100 | 0.959 | 0.715 | 어제 v3 |
 | `yolo26m_3folders_640b16/` | 3폴더 (562장) | 640 | 16 | 100 | **0.959** | **0.878** | 3폴더 베이스라인 |
 | `yolo26m_3folders_1280_auto/` | 3폴더 | 1280 | auto | 일부 | 0.334 | 0.111 | OOM으로 batch 축소 |
-| `yolo26m_unified_640b16/` | **통합 934장** | 640 | 16 | 100 | 0.892 | 0.727 | ★ **현재 최신** |
+| `yolo26m_unified_640b16/` | **통합 934장** | 640 | 16 | 100 | 0.892 | 0.727 | 빠른 추론·베이스라인 |
+| `yolo26m_unified_832b8/` | 통합(640 best에서 이어 학습) | 832 | 8 | 100 (best ep.54) | 0.855 | 0.659 | ★ **작은 객체·RealSense 권장** |
 
-학습 로그는 `runs/strawberry/*.log` 에 모두 보존됨. 각 모델 가중치는 `runs/detect/runs/strawberry/<name>/weights/{best,last}.pt`.
+학습 로그는 로컬 `runs/strawberry/*.log` (git 제외). 메트릭 요약은 `share/strawberry_yolo26m_unified/results*.csv` 참고. 가중치는 `runs/detect/runs/strawberry/<name>/weights/{best,last}.pt` (git 제외).
 
 > 통합 모델의 mAP가 3폴더보다 낮아 보이지만, val 데이터가 더 다양해진 결과(realscene·CVAT 포함)이므로 일반화 성능은 향상.
 
@@ -184,14 +185,23 @@ GPU 메모리 가이드 (RTX 5080 16GB 기준):
 
 ## 6. RealSense 실시간 추론
 
+640(빠름)과 832(해상도·소객체 유리) 예시:
+
 ```bash
+# 640 통합 모델
 python scripts/realsense_live.py \
     --weights runs/detect/runs/strawberry/yolo26m_unified_640b16/weights/best.pt \
-    --imgsz 640 \
-    --device 0 \
-    --smooth 7 \
-    --min-red-for-ripe 0.10
+    --imgsz 640 --device 0 --smooth 7 --min-red-for-ripe 0.10
+
+# 832 통합 모델 (권장: RealSense 848×480 업스케일 추론)
+python scripts/realsense_live.py \
+    --weights runs/detect/runs/strawberry/yolo26m_unified_832b8/weights/best.pt \
+    --imgsz 832 --device 0 --smooth 7 --min-red-for-ripe 0.10
 ```
+
+**GUI 오류 (`namedWindow` 미구현)**: `opencv-python`과 `opencv-python-headless`가 같이 있으면 headless가 먼저 로드될 수 있음. venv에서 headless 제거하거나 `PYTHONNOUSERSITE=1`로 사용자 site 비활성화. 서버·SSH만 쓸 때는 `--headless [--headless-out 경로.mp4]`.
+
+**카메라 EBUSY**: 다른 프로세스가 RealSense를 점유 중이면 재시도 후 안내 메시지가 출력됨. `fuser -v /dev/video*` 등으로 점유 확인.
 
 주요 옵션:
 
@@ -203,6 +213,9 @@ python scripts/realsense_live.py \
 | `--min-red-for-ripe` | 0.10 | ripe 박스 색 체크 임계값. 0.0=비활성화 |
 | `--show-depth` | off | 우측에 depth colormap 표시 |
 | `--match-dist` | 60 | 같은 딸기로 매칭할 최대 픽셀 거리 |
+| `--brightness` 등 | None | UVC 컬러 밝기·대비·채도·게인(지원 시 자동 클램프) |
+| `--no-auto-exposure` / `--exposure` | - | 수동 노출(어두운 환경 안정화 시) |
+| `--headless` | off | GUI 없이 MP4만 기록 |
 
 키: `q`=종료, `p`=스냅샷 저장. 스냅샷은 `runs/realsense/`에 저장.
 

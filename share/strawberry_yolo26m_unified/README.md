@@ -1,7 +1,10 @@
-# 딸기 검출 모델 공유 패키지 (YOLO26m, **unified v4**)
+# 딸기 검출 모델 공유 패키지 (YOLO26m, **unified v4 + 832b8 메트릭**)
 
-`runs/detect/runs/strawberry/yolo26m_unified_640b16/` 의 학습 산출물 복사본입니다.  
-이전 `v3` (yolo26m_ft_v3-2) 를 대체하는 **현재 권장 버전**입니다.
+`runs/detect/runs/strawberry/yolo26m_unified_640b16/` 의 학습 산출물 복사본(차트·csv)과,  
+동일 데이터로 **832×832·batch 8** 이어학습 메트릭(`results_832b8.csv`, `args_832b8.yaml`)을 함께 둡니다.  
+가중치(`weights/*.pt`)는 용량상 git에 없으니 로컬 학습 산출물을 복사해 사용하세요.
+
+이전 `v3` (yolo26m_ft_v3-2) 를 대체하는 **640 베이스라인**은 unified v4입니다.
 
 > 작성일: 2026-05-13  
 > 학습 환경: NVIDIA GeForce RTX 5080 Laptop GPU (16GB VRAM), Ultralytics 8.4.48, PyTorch 2.12+cu128
@@ -61,6 +64,23 @@
 
 ---
 
+## 832×832 이어학습 (`yolo26m_unified_832b8`, batch 8)
+
+640 `best.pt`에서 이어 학습. EarlyStopping으로 **best = epoch 54** (아래는 해당 에폭 val 집계).
+
+| 지표 | unified 640 | **832b8 (ep.54)** |
+|---|---|---|
+| Precision | 0.884 | **0.906** |
+| Recall    | 0.830 | 0.731 |
+| mAP50     | 0.892 | 0.855 |
+| mAP50-95  | 0.727 | 0.659 |
+
+> val 인스턴스 수가 640 학습 때(145)보다 많아질 수 있어(재라벨·해상도) 숫자만으로 640 vs 832 우열을 단정하지 마세요. RealSense 등 **고해상도 추론**에는 832 가중치를 우선 시도하는 것을 권장합니다.
+
+에폭별 전체 곡선: `results_832b8.csv`, 학습 인자: `args_832b8.yaml`.
+
+---
+
 ## 포함 파일
 
 | 경로 | 설명 |
@@ -69,7 +89,9 @@
 | `weights/last.pt` | 마지막 에폭 가중치 |
 | `args.yaml` | 학습 시 사용한 전체 인자 |
 | `strawberry_unified.yaml` | 데이터 클래스 정의 (재학습 시 `path:` 만 본인 환경으로 수정) |
-| `results.csv` | 에폭별 metric (loss, P, R, mAP) |
+| `results.csv` | 에폭별 metric (loss, P, R, mAP) — **640 학습** |
+| `results_832b8.csv` | 832 batch8 이어학습 에폭별 metric |
+| `args_832b8.yaml` | 832 학습 시 사용한 Ultralytics 인자 |
 | `results.png` | 학습 곡선 시각화 |
 | `BoxP_curve.png`, `BoxR_curve.png`, `BoxF1_curve.png`, `BoxPR_curve.png` | conf 임계별 P/R/F1/PR 곡선 |
 | `confusion_matrix.png`, `confusion_matrix_normalized.png` | 혼동행렬 |
@@ -87,6 +109,8 @@ pip install "ultralytics>=8.4" opencv-python pillow numpy
 # RealSense 사용 시
 pip install pyrealsense2
 ```
+
+GUI용 `realsense_live.py`는 `opencv-python-headless`와 동시 설치 시 충돌할 수 있음(리포지토리 `requirements.txt` 주석 참고).
 
 GPU 사용 시 환경에 맞는 PyTorch/CUDA 별도 설치.
 
@@ -122,9 +146,16 @@ for r in results:
 ### 4) Intel RealSense 실시간 (RGB-D)
 
 ```bash
+# 640 가중치 (weights/best.pt 복사 후)
 python realsense_live.py \
     --weights weights/best.pt \
     --imgsz 640 --device 0 \
+    --smooth 7 --min-red-for-ripe 0.10
+
+# 832 가중치를 복사한 경우
+python realsense_live.py \
+    --weights weights/best_832.pt \
+    --imgsz 832 --device 0 \
     --smooth 7 --min-red-for-ripe 0.10
 ```
 
@@ -138,6 +169,9 @@ python realsense_live.py \
 | `--min-red-for-ripe` | 0.10 | ripe 박스 색 체크 임계값. 0.0=비활성화 |
 | `--show-depth` | off | 우측에 depth colormap 표시 |
 | `--save-dir` | runs/realsense | 스냅샷 저장 폴더 |
+| `--headless` | off | GUI 없이 MP4만 저장 (`--headless-out` 선택) |
+| `--brightness` 등 | None | UVC 컬러 보정(지원 시) |
+| `--no-auto-exposure` / `--exposure` | - | 수동 노출 |
 
 키: `q` 종료, `p` 스냅샷 저장.
 

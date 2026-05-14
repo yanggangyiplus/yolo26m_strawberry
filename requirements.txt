@@ -1,5 +1,6 @@
 ultralytics>=8.4.0
 opencv-python>=4.8
+# realsense_live.py GUI: opencv-python-headless 와 동시 설치 시 headless 가 먼저 로드되어 namedWindow 오류
 Pillow>=10.0
 numpy>=1.24
 PyYAML>=6.0

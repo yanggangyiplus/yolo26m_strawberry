@@ -16,11 +16,17 @@ RGB-D 카메라이므로 검출 박스 중심점의 **깊이(거리 m)** 까지 
 
 요구 패키지:
     pip install pyrealsense2 opencv-python ultralytics
+
+OpenCV 창 오류(The function is not implemented) 시:
+    - 보통 `opencv-python-headless` 가 먼저 로드됨. `pip uninstall opencv-python-headless`
+    - 또는 `~/.local` 의 headless 가 venv 를 덮을 때: `PYTHONNOUSERSITE=1 python3 ...`
+    - GUI 없이 녹화만: `--headless`
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from collections import deque
 from pathlib import Path
@@ -30,6 +36,16 @@ import cv2
 import numpy as np
 import pyrealsense2 as rs
 from ultralytics import YOLO
+
+
+def cv2_gui_available() -> bool:
+    """highgui(창 표시) 사용 가능 여부. headless 빌드면 False."""
+    try:
+        cv2.namedWindow("__cv2_gui_probe__", cv2.WINDOW_NORMAL)
+        cv2.destroyWindow("__cv2_gui_probe__")
+        return True
+    except cv2.error:
+        return False
 
 
 def parse_args() -> argparse.Namespace:
@@ -66,6 +82,38 @@ def parse_args() -> argparse.Namespace:
                          "클수록 안정적이지만 반응이 느려짐. 0=비활성화")
     ap.add_argument("--match-dist", type=int, default=60,
                     help="이전 프레임 박스와 같은 딸기로 매칭할 최대 중심점 거리(픽셀)")
+    ap.add_argument(
+        "--headless",
+        action="store_true",
+        help="GUI 없이 annotated 영상을 MP4로만 저장 (opencv-python-headless·SSH 환경)",
+    )
+    ap.add_argument(
+        "--headless-out",
+        type=str,
+        default="",
+        help="--headless 시 출력 MP4 경로. 비우면 save_dir/live_<timestamp>.mp4",
+    )
+    # ── RealSense 컬러 센서 (UVC) ── 값은 기기마다 min/max 다름 → 지원 범위로 자동 클램프
+    ap.add_argument(
+        "--brightness",
+        type=float,
+        default=None,
+        help="컬러 밝기(지원 시). 예: 20~40 정도 올려보기. 미지정이면 카메라 기본값 유지",
+    )
+    ap.add_argument("--contrast", type=float, default=None, help="컬러 대비(지원 시)")
+    ap.add_argument("--saturation", type=float, default=None, help="컬러 채도(지원 시)")
+    ap.add_argument("--gain", type=float, default=None, help="컬러 게인(지원 시, 어두울 때)")
+    ap.add_argument(
+        "--no-auto-exposure",
+        action="store_true",
+        help="자동 노출 끄고 --exposure 로 고정(밝기/프레임 안정에 유리할 때)",
+    )
+    ap.add_argument(
+        "--exposure",
+        type=float,
+        default=None,
+        help="수동 노출. 단위는 기기/UVC마다 다름. --no-auto-exposure 와 함께. 시작 시 로그의 [min,max] 안에서 조정",
+    )
     return ap.parse_args()
 
 
@@ -83,7 +131,97 @@ def red_ratio(crop_bgr: np.ndarray) -> float:
     return float(mask.mean())
 
 
-def setup_pipeline(width: int, height: int, fps: int, with_depth: bool) -> tuple[rs.pipeline, rs.align | None, float]:
+def _set_color_option(sensor: rs.sensor, option: rs.option, value: float, label: str) -> None:
+    """지원되는 UVC 옵션만 설정하고, min~max 범위로 클램프한다."""
+    if not sensor.supports(option):
+        print(f"[WARN] color sensor: '{label}' 옵션 미지원 → 건너뜀")
+        return
+    rng = sensor.get_option_range(option)
+    v = float(max(rng.min, min(rng.max, value)))
+    sensor.set_option(option, v)
+    print(f"[INFO] color {label} = {v}  (허용 [{rng.min}, {rng.max}], step {rng.step})")
+
+
+def apply_color_controls(
+    profile: rs.pipeline_profile,
+    *,
+    brightness: float | None,
+    contrast: float | None,
+    saturation: float | None,
+    gain: float | None,
+    no_auto_exposure: bool,
+    exposure_us: float | None,
+) -> None:
+    """스트림 시작 직후 컬러 센서 밝기·노출 등 적용."""
+    try:
+        color_sensor = profile.get_device().first_color_sensor()
+    except RuntimeError:
+        print("[WARN] first_color_sensor() 실패 — 밝기/노출 설정 생략")
+        return
+
+    # 자동 노출 끄기 → 수동 노출/게인이 먹도록 (순서 중요)
+    if no_auto_exposure and color_sensor.supports(rs.option.enable_auto_exposure):
+        color_sensor.set_option(rs.option.enable_auto_exposure, 0.0)
+        print("[INFO] color auto_exposure = OFF")
+
+    if exposure_us is not None:
+        _set_color_option(color_sensor, rs.option.exposure, exposure_us, "exposure (us)")
+
+    if brightness is not None:
+        _set_color_option(color_sensor, rs.option.brightness, brightness, "brightness")
+    if contrast is not None:
+        _set_color_option(color_sensor, rs.option.contrast, contrast, "contrast")
+    if saturation is not None:
+        _set_color_option(color_sensor, rs.option.saturation, saturation, "saturation")
+    if gain is not None:
+        _set_color_option(color_sensor, rs.option.gain, gain, "gain")
+
+
+def _print_realsense_busy_help(err: BaseException) -> None:
+    """EBUSY(장치 사용 중)일 때 사용자에게 할 일을 안내한다."""
+    print(
+        "\n[ERROR] RealSense가 다른 프로그램에 의해 사용 중입니다 (errno=16 Device or resource busy).\n"
+        f"  원본 오류: {err}\n\n"
+        "  확인할 것:\n"
+        "  1) 이전에 실행한 realsense_live / realsense-viewer / RViz 가 아직 떠 있는지 → q 로 종료 또는 프로세스 종료\n"
+        "  2) ROS2 노드가 카메라를 쓰는지 → ros2 node list / 해당 노드 중지\n"
+        "  3) 다른 터미널에서 같은 스크립트가 돌고 있는지 → Ctrl+C\n"
+        "  4) USB 허브 대신 PC에 직접 연결, 케이블 재연결\n\n"
+        "  점유 프로세스 확인(예):\n"
+        "    fuser -v /dev/video*\n"
+        "    lsof /dev/video0\n",
+        file=sys.stderr,
+    )
+    try:
+        ctx = rs.context()
+        devs = list(ctx.query_devices())
+        if devs:
+            print("[INFO] 인식된 RealSense 장치:", file=sys.stderr)
+            for d in devs:
+                sn = d.get_info(rs.camera_info_serial_number)
+                name = d.get_info(rs.camera_info_name)
+                print(f"  - {name}  (S/N {sn})", file=sys.stderr)
+        else:
+            print("[INFO] librealsense가 인식한 장치: 없음", file=sys.stderr)
+    except Exception as e2:
+        print(f"[WARN] 장치 목록 조회 실패: {e2}", file=sys.stderr)
+
+
+def setup_pipeline(
+    width: int,
+    height: int,
+    fps: int,
+    with_depth: bool,
+    *,
+    brightness: float | None = None,
+    contrast: float | None = None,
+    saturation: float | None = None,
+    gain: float | None = None,
+    no_auto_exposure: bool = False,
+    exposure_us: float | None = None,
+    pipeline_retries: int = 6,
+    pipeline_retry_delay_s: float = 0.5,
+) -> tuple[rs.pipeline, rs.align | None, float]:
     """RealSense pipeline 시작.
 
     Returns
@@ -96,7 +234,42 @@ def setup_pipeline(width: int, height: int, fps: int, with_depth: bool) -> tuple
     cfg.enable_stream(rs.stream.color, width, height, rs.format.bgr8, fps)
     if with_depth:
         cfg.enable_stream(rs.stream.depth, width, height, rs.format.z16, fps)
-    profile = pipeline.start(cfg)
+
+    # 다른 프로세스(ROS, realsense-viewer, 이전 스크립트)가 장치를 잡고 있으면 EBUSY → 짧게 재시도
+    profile: rs.pipeline_profile | None = None
+    last_err: BaseException | None = None
+    for attempt in range(pipeline_retries):
+        try:
+            profile = pipeline.start(cfg)
+            break
+        except RuntimeError as e:
+            last_err = e
+            msg = str(e).lower()
+            is_busy = "busy" in msg or "errno=16" in msg or "resource busy" in msg
+            if is_busy and attempt + 1 < pipeline_retries:
+                print(
+                    f"[WARN] RealSense 장치 사용 중(EBUSY) — "
+                    f"{attempt + 1}/{pipeline_retries}, {pipeline_retry_delay_s:.1f}s 후 재시도…",
+                    flush=True,
+                )
+                time.sleep(pipeline_retry_delay_s)
+            else:
+                if is_busy:
+                    _print_realsense_busy_help(e)
+                raise
+    if profile is None:
+        _print_realsense_busy_help(last_err if last_err else RuntimeError("unknown"))
+        raise RuntimeError(str(last_err) if last_err else "pipeline.start 실패")
+
+    apply_color_controls(
+        profile,
+        brightness=brightness,
+        contrast=contrast,
+        saturation=saturation,
+        gain=gain,
+        no_auto_exposure=no_auto_exposure,
+        exposure_us=exposure_us,
+    )
 
     align: rs.align | None = None
     depth_scale = 0.0
@@ -208,6 +381,22 @@ class TrackedBox:
 def main() -> None:
     args = parse_args()
     with_depth = not args.no_depth
+    headless = bool(args.headless)
+
+    # GUI 모드인데 OpenCV 가 headless 빌드면 즉시 안내 후 종료
+    if not headless and not cv2_gui_available():
+        print(
+            "\n[ERROR] OpenCV 고창(GUI)을 쓸 수 없습니다. 보통 `opencv-python-headless` 가 로드된 경우입니다.\n"
+            f"  현재 cv2: {getattr(cv2, '__file__', '?')}  (버전 {cv2.__version__})\n\n"
+            "  해결 ① (권장): headless 제거\n"
+            "    pip uninstall opencv-python-headless\n\n"
+            "  해결 ②: 사용자 site-packages(~/.local)가 venv를 덮을 때\n"
+            "    PYTHONNOUSERSITE=1 python3 scripts/realsense_live.py ...\n\n"
+            "  해결 ③: 화면 없이 MP4로만 녹화\n"
+            "    python3 scripts/realsense_live.py --headless ...\n",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
     print(f"[INFO] loading YOLO: {args.weights}")
     model = YOLO(args.weights)
@@ -215,7 +404,20 @@ def main() -> None:
 
     print(f"[INFO] starting RealSense {args.width}x{args.height}@{args.fps}fps (depth={with_depth})")
     print(f"[INFO] temporal smoothing: {'OFF' if args.smooth <= 1 else f'{args.smooth}프레임 다수결'}")
-    pipeline, align, depth_scale = setup_pipeline(args.width, args.height, args.fps, with_depth)
+    if headless:
+        print("[INFO] headless 모드: 창 없이 MP4 저장 (종료: Ctrl+C)")
+    pipeline, align, depth_scale = setup_pipeline(
+        args.width,
+        args.height,
+        args.fps,
+        with_depth,
+        brightness=args.brightness,
+        contrast=args.contrast,
+        saturation=args.saturation,
+        gain=args.gain,
+        no_auto_exposure=args.no_auto_exposure,
+        exposure_us=args.exposure,
+    )
 
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -224,7 +426,12 @@ def main() -> None:
     tracker._md = args.match_dist  # type: ignore[attr-defined]
 
     win = "RealSense YOLO (q=quit, p=snapshot)"
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
+    if not headless:
+        cv2.namedWindow(win, cv2.WINDOW_NORMAL)
+
+    # headless: MP4 라이터 (첫 프레임에서 크기 확정 후 생성)
+    writer: cv2.VideoWriter | None = None
+    out_mp4: Path | None = None
 
     fps_t0 = time.time()
     fps_frames = 0
@@ -352,6 +559,8 @@ def main() -> None:
                 fps_display = fps_frames / (t1 - fps_t0)
                 fps_t0 = t1
                 fps_frames = 0
+                if headless:
+                    print(f"[INFO] FPS ~{fps_display:.1f}", flush=True)
             cv2.putText(
                 annotated, f"FPS {fps_display:.1f}", (10, 24),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA,
@@ -366,25 +575,47 @@ def main() -> None:
             else:
                 show = annotated
 
-            cv2.imshow(win, show)
-            key = cv2.waitKey(1) & 0xFF
-            if key in (ord("q"), 27):
-                break
-            if key == ord("p"):
-                # 스냅샷: 시각화 이미지 + 원본 컬러 + (있다면) 깊이 raw/colormap 저장
-                ts = time.strftime("%Y%m%d_%H%M%S")
-                cv2.imwrite(str(save_dir / f"{ts}_annotated.png"), annotated)
-                cv2.imwrite(str(save_dir / f"{ts}_color.png"), color)
-                if depth_image is not None:
-                    np.save(str(save_dir / f"{ts}_depth.npy"), depth_image)
-                    depth_cm = cv2.applyColorMap(
-                        cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET
+            # headless: MP4 기록 (GUI 없음)
+            if headless:
+                if writer is None:
+                    out_mp4 = Path(
+                        args.headless_out
+                        if args.headless_out.strip()
+                        else save_dir / f"live_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
                     )
-                    cv2.imwrite(str(save_dir / f"{ts}_depth.png"), depth_cm)
-                print(f"[snap] saved to {save_dir} (prefix {ts})")
+                    out_mp4.parent.mkdir(parents=True, exist_ok=True)
+                    h, w = show.shape[:2]
+                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                    writer = cv2.VideoWriter(str(out_mp4), fourcc, float(args.fps), (w, h))
+                    if not writer.isOpened():
+                        raise RuntimeError(f"VideoWriter 열기 실패: {out_mp4}")
+                    print(f"[INFO] MP4 저장 시작: {out_mp4.resolve()}")
+                writer.write(show)
+            else:
+                cv2.imshow(win, show)
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord("q"), 27):
+                    break
+                if key == ord("p"):
+                    # 스냅샷: 시각화 이미지 + 원본 컬러 + (있다면) 깊이 raw/colormap 저장
+                    ts = time.strftime("%Y%m%d_%H%M%S")
+                    cv2.imwrite(str(save_dir / f"{ts}_annotated.png"), annotated)
+                    cv2.imwrite(str(save_dir / f"{ts}_color.png"), color)
+                    if depth_image is not None:
+                        np.save(str(save_dir / f"{ts}_depth.npy"), depth_image)
+                        depth_cm = cv2.applyColorMap(
+                            cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET
+                        )
+                        cv2.imwrite(str(save_dir / f"{ts}_depth.png"), depth_cm)
+                    print(f"[snap] saved to {save_dir} (prefix {ts})")
     finally:
         pipeline.stop()
-        cv2.destroyAllWindows()
+        if writer is not None:
+            writer.release()
+            if out_mp4 is not None:
+                print(f"[INFO] MP4 저장 종료: {out_mp4.resolve()}")
+        if not headless:
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
