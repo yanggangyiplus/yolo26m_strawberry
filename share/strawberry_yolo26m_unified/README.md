@@ -1,7 +1,8 @@
 # 딸기 검출 모델 공유 패키지 (YOLO26m, **unified v4 + 832b8 메트릭**)
 
-`runs/detect/runs/strawberry/yolo26m_unified_640b16/` 의 학습 산출물 복사본(차트·csv)과,  
-동일 데이터로 **832×832·batch 8** 이어학습 메트릭(`results_832b8.csv`, `args_832b8.yaml`)을 함께 둡니다.  
+`runs/detect/runs/strawberry/yolo26m_unified_640b16/` 의 차트·csv·args를 루트에 반영하고,  
+**832×832·batch 8** run은 `832b8/` 디렉터리에 학습 산출물 전체를 복제합니다.  
+`realsense_live.py`·`strawberry_unified.yaml` 은 리포지토리 최신 소스와 동기화합니다.  
 가중치(`weights/*.pt`)는 용량상 git에 없으니 로컬 학습 산출물을 복사해 사용하세요.
 
 이전 `v3` (yolo26m_ft_v3-2) 를 대체하는 **640 베이스라인**은 unified v4입니다.
@@ -77,7 +78,7 @@
 
 > val 인스턴스 수가 640 학습 때(145)보다 많아질 수 있어(재라벨·해상도) 숫자만으로 640 vs 832 우열을 단정하지 마세요. RealSense 등 **고해상도 추론**에는 832 가중치를 우선 시도하는 것을 권장합니다.
 
-에폭별 전체 곡선: `results_832b8.csv`, 학습 인자: `args_832b8.yaml`.
+에폭별 전체 곡선: 루트의 `results_832b8.csv`·`args_832b8.yaml` 또는 **`832b8/`** 폴더(run과 동일 파일명)를 참고하세요.
 
 ---
 
@@ -85,20 +86,16 @@
 
 | 경로 | 설명 |
 |---|---|
-| `weights/best.pt` | ★ 검증 기준 최적 가중치 (추론에 권장) |
+| `weights/best.pt` | ★ 검증 기준 최적 가중치 (추론에 권장, 로컬에서 복사) |
 | `weights/last.pt` | 마지막 에폭 가중치 |
-| `args.yaml` | 학습 시 사용한 전체 인자 |
-| `strawberry_unified.yaml` | 데이터 클래스 정의 (재학습 시 `path:` 만 본인 환경으로 수정) |
-| `results.csv` | 에폭별 metric (loss, P, R, mAP) — **640 학습** |
-| `results_832b8.csv` | 832 batch8 이어학습 에폭별 metric |
-| `args_832b8.yaml` | 832 학습 시 사용한 Ultralytics 인자 |
-| `results.png` | 학습 곡선 시각화 |
-| `BoxP_curve.png`, `BoxR_curve.png`, `BoxF1_curve.png`, `BoxPR_curve.png` | conf 임계별 P/R/F1/PR 곡선 |
-| `confusion_matrix.png`, `confusion_matrix_normalized.png` | 혼동행렬 |
-| `labels.jpg` | train 라벨 분포 시각화 |
-| `val_batch{0,1,2}_labels.jpg` | val GT 시각화 |
-| `val_batch{0,1,2}_pred.jpg` | val 모델 예측 시각화 |
-| `realsense_live.py` | RealSense 실시간 추론 스크립트 (시간적 평활화 포함) |
+| `args.yaml` | **640** 학습 Ultralytics 인자 (최신 run에서 동기화) |
+| `strawberry_unified.yaml` | 리포지토리 `configs/` 와 동기화된 데이터 YAML (`path:` 는 본인 환경으로 수정) |
+| `results.csv` | **640** 에폭별 metric |
+| `results_832b8.csv` | **832** 에폭별 metric (루트 요약본, `832b8/results.csv` 와 동일 내용) |
+| `args_832b8.yaml` | **832** 학습 인자 (루트 요약본, `832b8/args.yaml` 와 동일 내용) |
+| `results.png`, `Box*.png`, `confusion*.png`, `labels.jpg`, `val_batch*.jpg` | **640** 학습 시각화 (최신 run에서 동기화) |
+| `832b8/` | **832×832 batch8** run 전체 복제: `args.yaml`, `results.csv`, 곡선·혼동행렬·train/val 배치 이미지 |
+| `realsense_live.py` | 리포지토리 `scripts/realsense_live.py` 와 동기화된 RealSense 스크립트 |
 
 ---
 
