@@ -29,20 +29,9 @@ datasets/yolo_unified/labels/test/
 datasets/**/*.cache
 
 # ───────────────────────────────
-# 학습/추론 결과 (이미지·로그 모두 노이즈 많음)
+# 학습/추론/검수 산출물 (로컬 전용, 메트릭은 share/<모델>/results*.csv)
 # ───────────────────────────────
-runs/detect/
-runs/autolabel_vis/
-runs/autolabel_3folders_vis/
-runs/autolabel_unified_vis/
-runs/compare/
-runs/realsense/
-runs/realsense_seg/
-
-# 학습 로그는 ANSI progress bar로 가득차 git에 부적합 (로컬에는 보존)
-# 깨끗한 metric은 share/<모델>/results.csv 에 보존됨
-runs/strawberry/*.log
-runs/strawberry/*.json
+runs/
 
 # ───────────────────────────────
 # 압축 파일
@@ -76,3 +65,4 @@ __pycache__/
 .DS_Store
 *.swp
 *.swo
+*.code-workspace
