@@ -1,0 +1,10 @@
+# 줄기 seg — 딸기 bbox 상단 ROI 크롭 + CLAHE 전처리 패치
+# 생성: python scripts/build_stem_roi_dataset.py (리포지토리 루트)
+
+path: datasets/yolo_stem_roi   # 본인 환경의 절대 경로로 수정
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: stem

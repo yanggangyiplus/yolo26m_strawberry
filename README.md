@@ -1,6 +1,9 @@
 # 딸기 수확 로봇용 YOLO26m 파인튜닝
 
-HuggingFace 공개 데이터셋 + 사용자 촬영 이미지로 **Ultralytics YOLO26m**을 2-class(`unripe_strawberry`, `ripe_strawberry`) 검출용으로 fine-tuning하고, RealSense RGB-D 카메라로 실시간 추론까지 수행하는 프로젝트입니다.
+> **모노레포 배포:** `harvesting_robot_miniproj/vision_yolo` 로 동기화할 때는  
+> `bash scripts/sync_to_vision_yolo.sh` 실행.
+
+HuggingFace 공개 데이터셋 + 사용자 촬영 이미지로 **Ultralytics YOLO26m**을 2-class(`unripe_strawberry`, `ripe_strawberry`) 검출용으로 fine-tuning하고, RealSense RGB-D 카메라로 **딸기 검출 + 줄기 그립** 실시간 추론까지 수행하는 프로젝트입니다.
 
 - 베이스 모델: `yolo26m.pt` (Ultralytics 8.4+, 첫 실행 시 자동 다운로드)
 - 학습 환경: NVIDIA GeForce RTX 5080 Laptop GPU (16GB VRAM)
@@ -30,39 +33,22 @@ HuggingFace 공개 데이터셋 + 사용자 촬영 이미지로 **Ultralytics YO
 yolo_strawberry/
 ├── README.md
 ├── requirements.txt
-├── .gitignore
-├── yolo26m.pt                          # 사전학습 가중치 (gitignore)
-├── configs/
-│   ├── strawberry.yaml                  # 초기 데이터 (yolo/)
-│   ├── strawberry_3folders.yaml         # 3폴더 데이터 (yolo_3folders/)
-│   └── strawberry_unified.yaml          # ★ 통합 데이터 (yolo_unified/)
+├── configs/                             # strawberry_*.yaml (path: datasets/… 상대경로)
 ├── scripts/
-│   ├── train.py                         # 학습
-│   ├── predict.py                       # 정적 이미지 추론 + 픽 후보 JSON
-│   ├── realsense_live.py                # ★ RealSense 실시간 추론
-│   ├── autolabel_user_pics.py           # HSV 기반 자동 라벨
-│   ├── convert_qin_to_yolo.py           # Qin2006 → YOLO
-│   ├── convert_uniquedata_to_yolo.py    # UniqueData CVAT → YOLO
-│   ├── split_dataset.py                 # train/val/test 분할 (symlink)
-│   ├── launch_labelimg.sh               # ★ LabelImg 수동 라벨링 런처
-│   ├── run_compare.py / show_results.py # 검증 비교 도구
-│   └── archive/                         # 사용 중지 스크립트
-├── datasets/                            # gitignore (라벨 일부만 포함)
-│   ├── raw/                             # HuggingFace 원본 (gitignore)
-│   ├── yolo/                            # 초기 변환 결과 (gitignore)
-│   ├── yolo_3folders/                   # 3폴더 학습용 (gitignore)
-│   └── yolo_unified/                    # ★ 통합 데이터셋
-│       ├── images/all/                  # 934장 (gitignore)
-│       └── labels/
-│           ├── all/                     # ★ 934개 라벨 (git에 포함됨)
-│           └── train|val|test/          # symlink (gitignore, split_dataset.py로 재생성)
-├── runs/
-│   ├── strawberry/*.log                 # 학습 로그 (gitignore, 로컬 보존)
-│   ├── detect/runs/strawberry/          # 학습 결과 weights (gitignore)
-│   ├── compare/                         # gitignore
-│   └── realsense/                       # 카메라 스냅샷 (gitignore)
-└── share/                               # 학습 결과 차트·csv 배포용
-    └── strawberry_yolo26m_ft_v3/        # weights/ 만 gitignore
+│   ├── train.py / train_seg.py          # detect / 줄기 seg 학습
+│   ├── realsense_stem_pipeline.py       # ★ RealSense: 딸기+줄기 그립 (통합)
+│   ├── realsense_live.py                # RealSense: 딸기만
+│   ├── build_stem_roi_dataset.py        # 줄기 ROI 데이터셋 생성
+│   ├── stem_roi_utils.py                # ROI·CLAHE·그립 유틸
+│   ├── sync_to_vision_yolo.sh           # → vision_yolo 동기화
+│   └── … (라벨·변환·검수 스크립트)
+├── datasets/
+│   ├── yolo_unified/                    # ★ detect 934장 라벨
+│   ├── yolo_unified_seg/                # 줄기 폴리곤 (전체 프레임)
+│   ├── yolo_unified_farm/              # 농장 전경 + bbox
+│   └── yolo_stem_roi/                   # 줄기 ROI 패치 라벨
+├── runs/                                # 학습·카메라 결과 (gitignore)
+└── share/strawberry_yolo26m_unified/    # ★ 배포: detect+stem 메트릭·스크립트·weights
 ```
 
 ---
@@ -185,15 +171,25 @@ GPU 메모리 가이드 (RTX 5080 16GB 기준):
 
 ## 6. RealSense 실시간 추론
 
-640(빠름)과 832(해상도·소객체 유리) 예시:
+### 6-1. 딸기 검출 + 줄기 그립 (통합, 권장)
+
+**한 스크립트**가 프레임마다 detect → ROI → stem seg → 그립점까지 처리합니다.  
+가중치만 detect / stem 두 개입니다.
 
 ```bash
-# 640 통합 모델
-python scripts/realsense_live.py \
-    --weights runs/detect/runs/strawberry/yolo26m_unified_640b16/weights/best.pt \
-    --imgsz 640 --device 0 --smooth 7 --min-red-for-ripe 0.10
+python scripts/realsense_stem_pipeline.py \
+    --weights-det runs/detect/runs/strawberry/yolo26m_unified_832b8/weights/best.pt \
+    --weights-stem runs/segment/runs/strawberry/yolo26m_stem_roi_128b16/weights/best.pt \
+    --imgsz-det 832 --imgsz-stem 128 --device 0
+```
 
-# 832 통합 모델 (권장: RealSense 848×480 업스케일 추론)
+줄기 seg·그립은 **기본적으로 `ripe_strawberry` 만** (unripe는 박스만 표시). unripe에도 줄기를 보려면 `--stem-unripe`.
+
+share 패키지에서 동일: `share/strawberry_yolo26m_unified/realsense_stem_pipeline.py`
+
+### 6-2. 딸기 검출만 (줄기 없음)
+
+```bash
 python scripts/realsense_live.py \
     --weights runs/detect/runs/strawberry/yolo26m_unified_832b8/weights/best.pt \
     --imgsz 832 --device 0 --smooth 7 --min-red-for-ripe 0.10

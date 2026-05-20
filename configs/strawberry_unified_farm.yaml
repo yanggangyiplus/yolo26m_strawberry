@@ -1,0 +1,11 @@
+# 농장 전경만 — qin + uniq + realscene (클로즈업·모형 제외)
+# 생성: python scripts/build_farm_dataset.py
+
+path: datasets/yolo_unified_farm
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: unripe_strawberry
+  1: ripe_strawberry

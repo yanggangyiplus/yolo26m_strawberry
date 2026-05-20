@@ -1,0 +1,1 @@
+/home/user01/yolo_strawberry/datasets/yolo_stem_roi/labels/all/uniq_3_f016.txt

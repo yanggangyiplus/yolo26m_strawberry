@@ -6,7 +6,7 @@
 #   3. strawberryDataset/Pickable/           → ripe   (id=1)  실제 익은 딸기
 #   4. strawberryDataset/UnPickable/         → unripe (id=0)  실제 덜 익은 딸기
 
-path: /home/user01/yolo_strawberry/datasets/yolo_3folders
+path: datasets/yolo_3folders
 train: images/train
 val: images/val
 test: images/test

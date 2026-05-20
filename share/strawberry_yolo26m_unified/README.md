@@ -1,13 +1,37 @@
-# 딸기 검출 모델 공유 패키지 (YOLO26m, **unified v4 + 832b8 메트릭**)
+# 딸기 검출 + 줄기 픽(그립) 공유 패키지 (YOLO26m)
 
-`runs/detect/runs/strawberry/yolo26m_unified_640b16/` 의 차트·csv·args를 루트에 반영하고,  
-**832×832·batch 8** run은 `832b8/` 디렉터리에 학습 산출물 전체를 복제합니다.  
-`realsense_live.py`·`strawberry_unified.yaml` 은 리포지토리 최신 소스와 동기화합니다.  
-가중치(`weights/*.pt`)는 용량상 git에 없으니 로컬 학습 산출물을 복사해 사용하세요.
+## ★ RealSense 실시간 — 한 스크립트에 같이 동작
 
-이전 `v3` (yolo26m_ft_v3-2) 를 대체하는 **640 베이스라인**은 unified v4입니다.
+**딸기 검출과 줄기(그립) 검출은 따로 실행하는 게 아닙니다.**  
+아래 **한 명령**으로 `realsense_stem_pipeline.py` 가 프레임마다 순서대로 처리합니다.
 
-> 작성일: 2026-05-13  
+```
+컬러 프레임 → [1] 딸기 detect → [2] 각 딸기 상단 ROI → [3] 줄기 seg → [4] 그립점 표시
+```
+
+| 구분 | 설명 |
+|---|---|
+| **실행 파일** | `realsense_stem_pipeline.py` **하나** (리포지토리 `scripts/realsense_stem_pipeline.py` 와 동일 로직) |
+| **가중치** | `weights/best.pt`(딸기) + `weights/stem_best.pt`(줄기) — 학습은 모델별로 했지만 **추론은 한 파이프라인** |
+| **detect만** | `realsense_live.py` — 줄기 없이 딸기 박스만 볼 때 (디버그·비교용) |
+
+```bash
+cd share/strawberry_yolo26m_unified
+python realsense_stem_pipeline.py \
+  --weights-det weights/best.pt \
+  --weights-stem weights/stem_best.pt \
+  --imgsz-det 832 --imgsz-stem 128
+```
+
+학습 메트릭·차트만 폴더가 나뉩니다: detect → 루트·`832b8/`, 줄기 → `stem/`.  
+가중치(`weights/*.pt`)는 용량상 git에 없으니 아래 **가중치 복사**를 참고하세요.
+
+| 파일 | 용도 |
+|---|---|
+| `weights/best.pt` | 딸기 detect (832 권장 시 832 학습본 복사) |
+| `weights/stem_best.pt` | 줄기 ROI seg (`yolo26m_stem_roi_128b16` best) |
+
+> 작성일: 2026-05-19 (줄기 픽 파이프라인 추가)  
 > 학습 환경: NVIDIA GeForce RTX 5080 Laptop GPU (16GB VRAM), Ultralytics 8.4.48, PyTorch 2.12+cu128
 
 ---
@@ -86,16 +110,22 @@
 
 | 경로 | 설명 |
 |---|---|
-| `weights/best.pt` | ★ 검증 기준 최적 가중치 (추론에 권장, 로컬에서 복사) |
-| `weights/last.pt` | 마지막 에폭 가중치 |
-| `args.yaml` | **640** 학습 Ultralytics 인자 (최신 run에서 동기화) |
-| `strawberry_unified.yaml` | 리포지토리 `configs/` 와 동기화된 데이터 YAML (`path:` 는 본인 환경으로 수정) |
-| `results.csv` | **640** 에폭별 metric |
-| `results_832b8.csv` | **832** 에폭별 metric (루트 요약본, `832b8/results.csv` 와 동일 내용) |
-| `args_832b8.yaml` | **832** 학습 인자 (루트 요약본, `832b8/args.yaml` 와 동일 내용) |
-| `results.png`, `Box*.png`, `confusion*.png`, `labels.jpg`, `val_batch*.jpg` | **640** 학습 시각화 (최신 run에서 동기화) |
-| `832b8/` | **832×832 batch8** run 전체 복제: `args.yaml`, `results.csv`, 곡선·혼동행렬·train/val 배치 이미지 |
-| `realsense_live.py` | 리포지토리 `scripts/realsense_live.py` 와 동기화된 RealSense 스크립트 |
+| `weights/best.pt` | ★ 딸기 detect 최적 가중치 (로컬에서 복사) |
+| `weights/stem_best.pt` | ★ 줄기 ROI seg 최적 가중치 (로컬에서 복사) |
+| `args.yaml` | **640** detect 학습 인자 |
+| `strawberry_unified.yaml` | detect 데이터 YAML |
+| `results.csv` / `results_832b8.csv` | detect 에폭별 metric |
+| `832b8/` | **832 detect** run 복제 (차트·csv·args) |
+| `stem/` | **줄기 ROI seg** run 복제 (`yolo26m_stem_roi_128b16`) |
+| `strawberry_stem_roi_seg.yaml` | 줄기 ROI 데이터 YAML (학습 재현용) |
+| `realsense_live.py` | 딸기만 검출 — RealSense 실시간 |
+| `realsense_stem_pipeline.py` | **딸기 + 줄기 그립** — RealSense 실시간 (권장) |
+| `predict.py` | 정적 이미지/폴더 ripe·unripe 판별 + 픽 JSON |
+| `review_stem_pipeline.py` | 이미지 폴더로 파이프라인 검수 JPG 저장 |
+| `stem_roi_utils.py` | ROI·CLAHE·HSV·그립 오프셋 유틸 |
+
+**추론 스크립트만 이 폴더에 두고 zip 공유하면 됩니다.**  
+`bash scripts/sync_share_package.sh` 로 RealSense 3종을 repo 최신과 맞출 수 있습니다.
 
 ---
 
@@ -115,10 +145,18 @@ GPU 사용 시 환경에 맞는 PyTorch/CUDA 별도 설치.
 
 ## 추론 예시
 
-### 1) 정적 이미지 / 폴더 / 영상
+### 1) 정적 이미지 — ripe/unripe 판별 + JSON
 
 ```bash
-yolo predict model=weights/best.pt source=경로 imgsz=640 conf=0.30
+cd share/strawberry_yolo26m_unified
+python predict.py --source /path/to/images --imgsz 832 --save-images
+# → runs/predict_picks.json (picks=ripe, avoid=unripe)
+```
+
+또는 Ultralytics CLI:
+
+```bash
+yolo predict model=weights/best.pt source=경로 imgsz=832 conf=0.30
 ```
 
 > 학습 시 `imgsz=640`이므로 추론도 동일 권장. 클래스 이름은 체크포인트에 포함됨.
@@ -140,18 +178,22 @@ for r in results:
         print(f"{model.names[int(cls)]}  conf={float(conf):.2f}  box={box.tolist()}")
 ```
 
-### 4) Intel RealSense 실시간 (RGB-D)
+### 4) Intel RealSense — 딸기 + 줄기 그립 (권장, 통합)
 
 ```bash
-# 640 가중치 (weights/best.pt 복사 후)
+cd share/strawberry_yolo26m_unified   # 이 README 있는 폴더
+
+python realsense_stem_pipeline.py \
+  --weights-det weights/best.pt \
+  --weights-stem weights/stem_best.pt \
+  --imgsz-det 832 --imgsz-stem 128 --device 0
+```
+
+### 4-1) RealSense — 딸기만 (줄기 없음, 선택)
+
+```bash
 python realsense_live.py \
     --weights weights/best.pt \
-    --imgsz 640 --device 0 \
-    --smooth 7 --min-red-for-ripe 0.10
-
-# 832 가중치를 복사한 경우
-python realsense_live.py \
-    --weights weights/best_832.pt \
     --imgsz 832 --device 0 \
     --smooth 7 --min-red-for-ripe 0.10
 ```
@@ -176,12 +218,117 @@ python realsense_live.py \
 
 ---
 
+## 줄기 픽(그립) — 모델·학습 정보
+
+위 **통합 스크립트** `realsense_stem_pipeline.py` 안에서 아래 단계가 이어집니다 (별도 프로그램 아님).
+
+```
+[RealSense 컬러+깊이]
+    → YOLO detect (ripe/unripe 딸기 bbox)
+    → 각 bbox 상단 ROI crop (줄기·윗동)
+    → CLAHE + HSV 줄기 강조 전처리
+    → YOLO seg (stem 마스크, 128×128)
+    → 마스크 중심 + 깊이 기반 1cm 위 오프셋 → 그립점 (노란 원)
+```
+
+### 학습 데이터 (줄기 ROI)
+
+| 항목 | 내용 |
+|---|---|
+| 원본 | `yolo_unified_farm` 이미지 + detect bbox |
+| 생성 | `build_stem_roi_dataset.py` — 과실마다 상단 ROI 패치 + 줄기 폴리곤 |
+| 패치 수 | train 789 / val 98 / test 100 |
+| 클래스 | `stem` (단일) |
+| 전처리 | CLAHE(LAB) + HSV 줄기 채널 부스트 (학습·추론 동일) |
+
+### 학습 설정 (`yolo26m_stem_roi_128b16`)
+
+| 항목 | 값 |
+|---|---|
+| 베이스 | `yolo26m-seg.pt` |
+| imgsz | **128** (작은 ROI 패치) |
+| batch | 16 |
+| epochs | 100 |
+
+### 성능 (val, mask 기준)
+
+| 지표 | best (ep.75) | last (ep.100) |
+|---|---|---|
+| mAP50 (M) | **0.648** | 0.583 |
+| mAP50-95 (M) | **0.314** | 0.265 |
+| Precision (M) | 0.701 | 0.654 |
+| Recall (M) | 0.655 | 0.586 |
+
+> 추론·배포에는 **`weights/stem_best.pt`** (학습 run의 `best.pt` 복사) 사용을 권장합니다. 에폭 곡선은 `stem/results.csv` 참고.
+
+### 가중치 복사 (팀원)
+
+```bash
+# 리포지토리 루트에서
+PKG=share/strawberry_yolo26m_unified
+
+# 딸기 detect (832 권장)
+cp runs/detect/runs/strawberry/yolo26m_unified_832b8/weights/best.pt \
+   "$PKG/weights/best.pt"
+
+# 줄기 ROI seg
+cp runs/segment/runs/strawberry/yolo26m_stem_roi_128b16/weights/best.pt \
+   "$PKG/weights/stem_best.pt"
+```
+
+### RealSense — 줄기 그립 실시간
+
+```bash
+cd share/strawberry_yolo26m_unified
+
+python realsense_stem_pipeline.py \
+  --weights-det weights/best.pt \
+  --weights-stem weights/stem_best.pt \
+  --imgsz-det 832 --imgsz-stem 128 \
+  --device 0 \
+  --grip-margin-cm 1.0
+```
+
+| 옵션 | 기본값 | 설명 |
+|---|---|---|
+| `--imgsz-det` | 832 | detect 입력 크기 (가중치 학습 해상도와 맞출 것) |
+| `--imgsz-stem` | 128 | stem ROI seg 입력 크기 |
+| `--conf-stem` | 0.20 | 줄기 seg 최소 confidence |
+| `--above-ratio` | 0.55 | bbox 위쪽 ROI 확장 비율 |
+| `--grip-margin-cm` | 1.0 | 마스크 중심에서 줄기 방향(위)으로 올리는 그립 오프셋 [cm] |
+| `--stem-unripe` | off | unripe에도 줄기·그립 (기본: **ripe만**) |
+| `--no-preprocess` | off | CLAHE/HSV 전처리 끄기 |
+| `--no-roi` | off | ROI 없이 전체 프레임 stem (구 방식 폴백) |
+| `--no-depth` | off | 깊이 없이 2D만 (오프셋은 0.5m 가정) |
+
+시각화:
+
+- 초록/주황 박스: ripe / unripe 딸기
+- 주황 테두리 사각형: 줄기 ROI
+- **노란 원**: 최종 그립점 — **`ripe_strawberry` 만** (unripe는 박스만)
+- 회색 작은 점: seg 마스크 중심 (오프셋 전)
+
+키: `q` 종료, `p` 스냅샷 (`runs/realsense_stem/`).
+
+리포지토리 루트에서 동일 파이프라인:
+
+```bash
+python scripts/realsense_stem_pipeline.py \
+  --weights-det runs/detect/runs/strawberry/yolo26m_unified_832b8/weights/best.pt \
+  --weights-stem runs/segment/runs/strawberry/yolo26m_stem_roi_128b16/weights/best.pt \
+  --imgsz-det 832 --imgsz-stem 128
+```
+
+---
+
 ## 클래스 정의
 
 | id | 이름 | 색상 (RealSense 시각화) |
 |---|---|---|
 | 0 | `unripe_strawberry` | 주황 |
 | 1 | `ripe_strawberry` | 초록 |
+
+**줄기 seg** (`stem/`): id `0` = `stem` (그립 마스크)
 
 ---
 
@@ -190,6 +337,8 @@ python realsense_live.py \
 - val의 ripe 클래스 (0.877)가 unripe (0.906)보다 약간 낮음 — 실제 ripe 박스가 더 많아(86 vs 59) 다양한 조명·가림 케이스 포함
 - realscene 학습 데이터가 7장으로 적음 → 야외 다양 환경 추가 데이터 권장
 - 자동 HSV 라벨로 만든 strawberryDataset 부분은 박스 정확도 다소 낮을 수 있음
+- 줄기 seg: ROI가 작고(128px) 조명·가림에 민감 — detect bbox가 틀리면 그립점도 어긋남
+- 그립 1cm 오프셋은 pinhole+median depth 근사; stem이 화면 가장자리·근거리일 때 오차 증가
 
 ---
 

@@ -1,0 +1,12 @@
+# 줄기(stem) 단일 클래스 segmentation — detect 모델과 병행 사용
+#
+# 이미지: build_farm_dataset.py --also-seg 로 농장 전경만 복제 (qin/uniq/realscene)
+# 라벨: autolabel_stem_seg.py (--src-labels yolo_unified_farm/labels/all)
+
+path: datasets/yolo_unified_seg
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: stem

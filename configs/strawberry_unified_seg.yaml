@@ -1,0 +1,25 @@
+# Ultralytics YOLO segmentation — 통합 데이터 + 줄기(stem) 마스크
+#
+# 라벨 형식 (detect 박스와 다름):
+#   class_id x1 y1 x2 y2 x3 y3 ...   (정규화된 폴리곤 꼭짓점)
+#
+# 클래스:
+#   0 unripe_strawberry  — 과실 마스크
+#   1 ripe_strawberry    — 과실 마스크
+#   2 stem               — 줄기(꼭지) 마스크 — 비틀기·그리핑용
+#
+# 이미지는 detect 통합셋과 동일 경로를 쓰려면:
+#   python scripts/setup_seg_dataset.py
+# 라벨은 datasets/yolo_unified_seg/labels/all/ 에 새로 작업 (CVAT·labelme 등).
+# 분할:
+#   python scripts/split_dataset.py --root datasets/yolo_unified_seg
+
+path: datasets/yolo_unified_seg
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: unripe_strawberry
+  1: ripe_strawberry
+  2: stem

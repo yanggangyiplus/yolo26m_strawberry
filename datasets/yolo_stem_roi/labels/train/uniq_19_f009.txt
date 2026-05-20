@@ -1,0 +1,1 @@
+/home/user01/yolo_strawberry/datasets/yolo_stem_roi/labels/all/uniq_19_f009.txt

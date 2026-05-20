@@ -7,7 +7,7 @@
 #
 # 픽 정책: ripe만 수확 후보. unripe는 회피.
 
-path: /home/user01/yolo_strawberry/datasets/yolo
+path: datasets/yolo
 train: images/train
 val: images/val
 test: images/test

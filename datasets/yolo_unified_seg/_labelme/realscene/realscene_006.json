@@ -1,0 +1,68 @@
+{
+  "version": "6.2.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "stem",
+      "points": [
+        [
+          1061.272727272727,
+          1206.909090909091
+        ],
+        [
+          1055.212121212121,
+          1319.0303030303032
+        ],
+        [
+          1079.4545454545455,
+          1322.0606060606062
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    },
+    {
+      "label": "stem",
+      "points": [
+        [
+          1227.939393939394,
+          1800.848484848485
+        ],
+        [
+          1227.939393939394,
+          1682.6666666666667
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    },
+    {
+      "label": "stem",
+      "points": [
+        [
+          1406.7272727272725,
+          1570.5454545454547
+        ],
+        [
+          1406.7272727272725,
+          1479.6363636363637
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    }
+  ],
+  "imagePath": "realscene_006.png",
+  "imageData": null,
+  "imageHeight": 4032,
+  "imageWidth": 2268
+}

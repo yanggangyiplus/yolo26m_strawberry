@@ -15,6 +15,9 @@ datasets/yolo/
 datasets/yolo_3folders/
 datasets/yolo_unified/images/
 datasets/yolo_unified/_label_*/
+datasets/yolo_unified_farm/images/
+datasets/yolo_unified_seg/images/
+datasets/yolo_stem_roi/images/
 
 # 라벨 분할 폴더는 split_dataset.py로 만든 절대경로 심볼릭 링크라 git에 안전하지 않음
 # labels/all/ 만 포함하고, train/val/test 는 split_dataset.py를 다시 실행해 재생성
@@ -34,6 +37,7 @@ runs/autolabel_3folders_vis/
 runs/autolabel_unified_vis/
 runs/compare/
 runs/realsense/
+runs/realsense_seg/
 
 # 학습 로그는 ANSI progress bar로 가득차 git에 부적합 (로컬에는 보존)
 # 깨끗한 metric은 share/<모델>/results.csv 에 보존됨

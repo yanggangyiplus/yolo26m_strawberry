@@ -8,7 +8,7 @@
 #   5. user_raw/red_* 사용자 모형 사진 (39장) — HSV 자동 라벨
 #   6. realscene_*    실제 장면 사진 (7장) — 수동 라벨링 (가장 중요!)
 
-path: /home/user01/yolo_strawberry/datasets/yolo_unified
+path: datasets/yolo_unified
 train: images/train
 val: images/val
 test: images/test
